@@ -1,8 +1,9 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
-const char WIFI_SSID[] = "你的热点名称";
-const char WIFI_PWD[] = "你的热点密码";
+// ESP32 AP热点配置
+const char AP_SSID[] = "ESP32-TouchMonitor";
+const char AP_PWD[] = "12345678";
 
 #define TOUCH_PIN 4
 int touchVal = 0;
@@ -25,17 +26,14 @@ void sendData(){
 void setup(){
   Serial.begin(115200);
   WiFi.disconnect(true);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID,WIFI_PWD);
-  int wait=0;
-  while(WiFi.status()!=WL_CONNECTED && wait<40){
-    delay(500);
-    wait++;
-  }
-  // 仅连接成功后打印IP，不会出现0.0.0.0
-  Serial.println("WiFi连接成功！");
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(AP_SSID, AP_PWD);
+
+  IPAddress apIP = WiFi.softAPIP();
+  Serial.println("ESP32 AP 已开启");
   Serial.print("访问地址：http://");
-  Serial.println(WiFi.localIP());
+  Serial.println(apIP);
+
   server.on("/",rootPage);
   server.on("/getdata",sendData);
   server.begin();

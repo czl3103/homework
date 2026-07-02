@@ -1,9 +1,9 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
-// 修改为你的iPhone热点名称、密码
-const char WIFI_SSID[] = "你的热点名";
-const char WIFI_PWD[] = "你的热点密码";
+// ESP32 AP热点配置
+const char AP_SSID[] = "ESP32-Dimmer";
+const char AP_PWD[] = "12345678";
 
 const int LED_PIN = 2;
 const int PWM_FREQ = 5000;
@@ -53,28 +53,15 @@ void setup()
   ledcAttach(LED_PIN, PWM_FREQ, PWM_RES);
   ledcWrite(LED_PIN, 0);
 
+  // 切换为AP模式
   WiFi.disconnect(true, true);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PWD);
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(AP_SSID, AP_PWD);
 
-  Serial.print("Connect WiFi ");
-  int count = 0;
-  while(WiFi.status() != WL_CONNECTED && count < 40)
-  {
-    delay(500);
-    Serial.print(".");
-    count++;
-  }
-
-  if(WiFi.status() == WL_CONNECTED)
-  {
-    Serial.println("\nConnected! IP: " + WiFi.localIP().toString());
-  }
-  else
-  {
-    Serial.println("\nConnect failed, restart...");
-    ESP.restart();
-  }
+  IPAddress apIP = WiFi.softAPIP();
+  Serial.println("ESP32 AP 已开启");
+  Serial.print("访问地址：http://");
+  Serial.println(apIP);
 
   server.on("/", webIndex);
   server.on("/set", setBrightness);
