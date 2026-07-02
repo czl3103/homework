@@ -1,6 +1,6 @@
 #define TOUCH_PIN 4
 #define LED_PIN 2
-#define THRESHOLD 20
+#define THRESHOLD 400
 #define DEBOUNCE_TIME 20
 
 const int freq = 5000;
@@ -10,14 +10,19 @@ int speedLevel = 1; // 1慢 / 2中 / 3快
 int lastTouchVal = 100;
 unsigned long lastTouchTime = 0;
 
+// 非阻塞呼吸全局变量
+int duty = 0;
+int dir = 1; // 1变亮 -1变暗
+unsigned long lastBreathTime = 0;
+int breathDelay; // 每步间隔，由档位控制
+
 void setup() {
   Serial.begin(115200);
-  // 新版标准PWM绑定API，无ledcSetup报错
   ledcAttach(LED_PIN, freq, resolution);
 }
 
 void loop() {
-  // 触摸检测、档位切换逻辑
+  // 1. 触摸检测逻辑（完全保留原有触摸判断）
   int touchVal = touchRead(TOUCH_PIN);
   unsigned long now = millis();
   if (now - lastTouchTime > DEBOUNCE_TIME) {
@@ -31,22 +36,24 @@ void loop() {
   }
   lastTouchVal = touchVal;
 
-  // 根据档位设置呼吸步长，控制速度
-  int step;
+  // 根据档位更新呼吸单步延时（控制速度）
   switch(speedLevel){
-    case 1: step = 1; break; // 慢速呼吸
-    case 2: step = 3; break; // 中速呼吸
-    case 3: step = 6; break; // 快速呼吸
+    case 1: breathDelay = 10; break; // 慢速
+    case 2: breathDelay = 3; break;  // 中速
+    case 3: breathDelay = 1; break;  // 快速
   }
 
-  // 渐亮
-  for(int duty = 0; duty <= 255; duty += step){
+  // 2. 非阻塞呼吸，不会卡住触摸检测
+  if(now - lastBreathTime >= breathDelay){
+    lastBreathTime = now;
+    duty += dir;
+
+    // 亮度边界反转方向
+    if(duty >= 255){
+      dir = -1;
+    }else if(duty <= 0){
+      dir = 1;
+    }
     ledcWrite(LED_PIN, duty);
-    delay(10);
-  }
-  // 渐暗
-  for(int duty = 255; duty >= 0; duty -= step){
-    ledcWrite(LED_PIN, duty);
-    delay(10);
   }
 }
